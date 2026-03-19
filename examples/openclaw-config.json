@@ -1,0 +1,41 @@
+{
+  "gateway": {
+    "url": "http://localhost:18789",
+    "port": 18789,
+    "auth": {
+      "type": "none"
+    }
+  },
+  "channels": {
+    "slack": {
+      "enabled": true,
+      "bot_token": "xoxb-your-slack-bot-token",
+      "channels": ["#general", "#random"]
+    },
+    "discord": {
+      "enabled": true,
+      "bot_token": "your-discord-bot-token",
+      "guild_id": "123456789012345678"
+    },
+    "email": {
+      "enabled": true,
+      "smtp": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "secure": false,
+        "auth": {
+          "user": "your-email@gmail.com",
+          "pass": "your-app-password"
+        }
+      }
+    }
+  },
+  "sessions": {
+    "default": {
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "max_tokens": 2000
+    }
+  },
+  "workspace": "/home/user/openclaw-workspace"
+}

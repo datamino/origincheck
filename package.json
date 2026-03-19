@@ -1,0 +1,47 @@
+{
+  "name": "origincheck",
+  "version": "1.1.0",
+  "description": "Universal OpenClaw Monitoring Platform - Step 1.1: Universal Config Reader",
+  "main": "lib/config-discovery.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/test-linux.js",
+    "test": "npm run test:config && npm run test:discovery && npm run test:error",
+    "test:config": "node scripts/test-config.js",
+    "test:discovery": "node scripts/test-discovery.js",
+    "test:sample": "node scripts/test-sample.js",
+    "test:error": "node scripts/test-error.js",
+    "test:linux": "node scripts/test-linux.js",
+    "start": "node scripts/test-linux.js",
+    "build": "echo 'Step 1.1 - No build required for config reader'",
+    "lint": "echo 'Step 1.1 - No linting required for config reader'"
+  },
+  "keywords": [
+    "openclaw",
+    "monitoring",
+    "config",
+    "discovery",
+    "cross-platform"
+  ],
+  "author": "originCheck Team",
+  "license": "MIT",
+  "dependencies": {
+    "readline": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/readline": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/origincheck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/origincheck/issues"
+  },
+  "homepage": "https://github.com/yourusername/origincheck#readme"
+}
