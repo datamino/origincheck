@@ -5,15 +5,15 @@
   "main": "lib/config-discovery.js",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/test-gateway-discovery.js",
+    "dev": "node scripts/test-gateway-simple.js",
     "test": "npm run test:linux && npm run test:gateway",
     "test:config": "node scripts/test-config.js",
     "test:discovery": "node scripts/test-discovery.js",
     "test:sample": "node scripts/test-sample.js",
     "test:error": "node scripts/test-error.js",
     "test:linux": "node scripts/test-linux.js",
-    "test:gateway": "node scripts/test-gateway-discovery.js",
-    "start": "node scripts/test-gateway-discovery.js",
+    "test:gateway": "node scripts/test-gateway-simple.js",
+    "start": "node scripts/test-gateway-simple.js",
     "build": "echo 'Step 1.2 - No build required for gateway discovery'",
     "lint": "echo 'Step 1.2 - No linting required for gateway discovery'"
   },
