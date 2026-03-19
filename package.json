@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/test-gateway-simple.js",
-    "test": "npm run test:linux && npm run test:gateway && npm run test:real",
+    "test": "npm run test:linux && npm run test:gateway && npm run test:dashboard",
     "test:config": "node scripts/test-config.js",
     "test:discovery": "node scripts/test-discovery.js",
     "test:sample": "node scripts/test-sample.js",
@@ -14,6 +14,7 @@
     "test:linux": "node scripts/test-linux.js",
     "test:gateway": "node scripts/test-gateway-simple.js",
     "test:real": "node scripts/test-real-gateway.js",
+    "test:dashboard": "node scripts/test-dashboard-auth.js",
     "start": "node scripts/test-gateway-simple.js",
     "build": "echo 'Step 1.2 - No build required for gateway discovery'",
     "lint": "echo 'Step 1.2 - No linting required for gateway discovery'"
