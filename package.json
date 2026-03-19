@@ -5,16 +5,17 @@
   "main": "lib/config-discovery.js",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/test-linux.js",
-    "test": "npm run test:config && npm run test:discovery && npm run test:error",
+    "dev": "node scripts/test-gateway-discovery.js",
+    "test": "npm run test:linux && npm run test:gateway",
     "test:config": "node scripts/test-config.js",
     "test:discovery": "node scripts/test-discovery.js",
     "test:sample": "node scripts/test-sample.js",
     "test:error": "node scripts/test-error.js",
     "test:linux": "node scripts/test-linux.js",
-    "start": "node scripts/test-linux.js",
-    "build": "echo 'Step 1.1 - No build required for config reader'",
-    "lint": "echo 'Step 1.1 - No linting required for config reader'"
+    "test:gateway": "node scripts/test-gateway-discovery.js",
+    "start": "node scripts/test-gateway-discovery.js",
+    "build": "echo 'Step 1.2 - No build required for gateway discovery'",
+    "lint": "echo 'Step 1.2 - No linting required for gateway discovery'"
   },
   "keywords": [
     "openclaw",
@@ -25,12 +26,9 @@
   ],
   "author": "originCheck Team",
   "license": "MIT",
-  "dependencies": {
-    "readline": "^1.3.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/readline": "^3.0.0",
     "typescript": "^5.0.0"
   },
   "engines": {

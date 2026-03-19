@@ -1,6 +1,7 @@
 import * as readline from 'readline';
 import { CrossPlatformFileSystem } from './utils/file-system.js';
-import { OpenClawConfig, ConfigDiscoveryResult, ConfigWizardStep } from './types/config.js';
+import { OpenClawConfig, ConfigDiscoveryResult, ConfigWizardStep, GatewayConfig, AuthInfo, EnhancedConfigResult, GatewayHealth } from './types/config.js';
+import { GatewayHealthMonitor } from './gateway-health.js';
 
 export class UniversalConfigReader {
   private rl: readline.Interface;
@@ -284,6 +285,279 @@ export class UniversalConfigReader {
         resolve(answer);
       });
     });
+  }
+
+  /**
+   * 🔧 GATEWAY URL CONSTRUCTION
+   * 
+   * Builds Gateway URL from OpenClaw configuration.
+   * This converts port/mode/bind into a working URL.
+   * 
+   * Examples:
+   * - { port: 18789, mode: "local", bind: "loopback" } → "http://localhost:18789"
+   * - { port: 8080, mode: "remote", bind: "all" } → "http://0.0.0.0:8080"
+   * 
+   * @param config - OpenClaw configuration
+   * @returns Gateway URL or null if not constructable
+   */
+  constructGatewayURL(config: OpenClawConfig): string | null {
+    const gateway = config.gateway as GatewayConfig;
+    if (!gateway) {
+      console.log('❌ No gateway configuration found');
+      return null;
+    }
+
+    const port = gateway.port || 18789;
+    const mode = gateway.mode || 'local';
+    const bind = gateway.bind || 'loopback';
+
+    // Construct URL based on mode and bind
+    let host: string;
+    
+    switch (mode) {
+      case 'local':
+        host = this.getLocalHost(bind);
+        break;
+      case 'remote':
+        host = this.getRemoteHost(bind);
+        break;
+      case 'tailscale':
+        host = this.getTailscaleHost(bind);
+        break;
+      default:
+        host = 'localhost';
+    }
+
+    const url = `http://${host}:${port}`;
+    console.log(`🔧 Constructed Gateway URL: ${url} (mode: ${mode}, bind: ${bind})`);
+    
+    return url;
+  }
+
+  /**
+   * 🏠 GET LOCAL HOST ADDRESS
+   * 
+   * Determines host address for local mode.
+   * 
+   * @param bind - Bind configuration
+   * @returns Host address
+   */
+  private getLocalHost(bind: string): string {
+    switch (bind) {
+      case 'loopback':
+        return 'localhost';
+      case 'all':
+      case 'public':
+        return '0.0.0.0';
+      default:
+        return 'localhost';
+    }
+  }
+
+  /**
+   * 🌍 GET REMOTE HOST ADDRESS
+   * 
+   * Determines host address for remote mode.
+   * 
+   * @param bind - Bind configuration
+   * @returns Host address
+   */
+  private getRemoteHost(bind: string): string {
+    switch (bind) {
+      case 'all':
+      case 'public':
+        return '0.0.0.0';
+      case 'loopback':
+        return 'localhost';
+      default:
+        return '0.0.0.0';
+    }
+  }
+
+  /**
+   * 🐉 GET TAILSCALE HOST ADDRESS
+   * 
+   * Determines host address for Tailscale mode.
+   * 
+   * @param bind - Bind configuration
+   * @returns Host address
+   */
+  private getTailscaleHost(bind: string): string {
+    // Tailscale typically uses 100.x.x.x addresses
+    // For now, default to localhost
+    return 'localhost';
+  }
+
+  /**
+   * 🔐 AUTHENTICATION DETECTION
+   * 
+   * Extracts authentication information from OpenClaw config.
+   * This prepares auth for Gateway API calls.
+   * 
+   * @param config - OpenClaw configuration
+   * @returns Authentication information
+   */
+  detectAuthMethod(config: OpenClawConfig): AuthInfo {
+    const gateway = config.gateway as GatewayConfig;
+    
+    if (!gateway?.auth) {
+      console.log('🔐 No authentication configured');
+      return { type: 'none' };
+    }
+
+    const authMode = gateway.auth.mode || 'none';
+    const token = gateway.auth.token;
+
+    switch (authMode) {
+      case 'token':
+        if (!token) {
+          console.log('⚠️  Token auth configured but no token provided');
+          return { type: 'none' };
+        }
+        console.log('🔐 Token authentication detected');
+        return { type: 'token', token };
+      
+      case 'password':
+        console.log('🔐 Password authentication detected');
+        return { 
+          type: 'password', 
+          credentials: gateway.auth 
+        };
+      
+      case 'none':
+      default:
+        console.log('🔐 No authentication required');
+        return { type: 'none' };
+    }
+  }
+
+  /**
+   * 🌐 GATEWAY URL VALIDATION
+   * 
+   * Validates if a Gateway URL is properly formatted.
+   * 
+   * @param url - Gateway URL to validate
+   * @returns True if URL is valid
+   */
+  validateGatewayURL(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 🔌 GATEWAY CONNECTION TEST
+   * 
+   * Tests if Gateway is reachable at the specified URL.
+   * This is a basic connectivity test.
+   * 
+   * @param url - Gateway URL to test
+   * @param auth - Authentication information
+   * @returns True if Gateway is reachable
+   */
+  async testGatewayConnection(url: string, auth?: AuthInfo): Promise<boolean> {
+    try {
+      console.log(`🔌 Testing Gateway connection: ${url}`);
+      
+      const health = await GatewayHealthMonitor.checkGatewayHealth(url, auth);
+      
+      if (health.status === 'healthy') {
+        console.log(`✅ Gateway connection successful (${health.responseTime}ms)`);
+        return true;
+      } else {
+        console.log(`❌ Gateway connection failed: ${health.error}`);
+        return false;
+      }
+    } catch (error) {
+      console.log(`❌ Gateway connection error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
+    }
+  }
+
+  /**
+   * 🏥 COMPLETE GATEWAY DISCOVERY
+   * 
+   * Performs complete Gateway discovery including URL construction,
+   * auth detection, and health testing.
+   * 
+   * @returns Enhanced configuration result with Gateway information
+   */
+  async discoverGateway(): Promise<EnhancedConfigResult> {
+    console.log('🚀 Starting Gateway Discovery (Step 1.2)\n');
+
+    // Step 1: Use Step 1.1 to find config
+    console.log('📋 Step 1: Finding OpenClaw configuration...');
+    const configResult = await this.discoverConfig();
+    
+    if (!configResult.config) {
+      console.log('❌ No OpenClaw configuration found');
+      return {
+        ...configResult,
+        gatewayURLValid: false,
+        gatewayConnection: false
+      };
+    }
+
+    console.log(`✅ OpenClaw config found at: ${configResult.path}`);
+
+    // Step 2: Construct Gateway URL
+    console.log('\n🔧 Step 2: Constructing Gateway URL...');
+    const gatewayURL = this.constructGatewayURL(configResult.config);
+    
+    if (!gatewayURL) {
+      console.log('❌ Failed to construct Gateway URL');
+      return {
+        ...configResult,
+        gatewayURLValid: false,
+        gatewayConnection: false
+      };
+    }
+
+    const isURLValid = this.validateGatewayURL(gatewayURL);
+    console.log(`📋 Gateway URL: ${gatewayURL}`);
+    console.log(`📋 URL Valid: ${isURLValid}`);
+
+    // Step 3: Detect authentication
+    console.log('\n🔐 Step 3: Detecting authentication...');
+    const authInfo = this.detectAuthMethod(configResult.config);
+    console.log(`📋 Auth Type: ${authInfo.type}`);
+
+    // Step 4: Test Gateway connection
+    console.log('\n🔌 Step 4: Testing Gateway connection...');
+    const isConnected = await this.testGatewayConnection(gatewayURL, authInfo);
+
+    // Step 5: Get Gateway health (if connected)
+    let gatewayHealth: GatewayHealth | undefined;
+    if (isConnected) {
+      console.log('\n🏥 Step 5: Getting Gateway health...');
+      gatewayHealth = await GatewayHealthMonitor.checkGatewayHealth(gatewayURL, authInfo);
+      
+      console.log(`📋 Gateway Status: ${gatewayHealth.status}`);
+      console.log(`📋 Response Time: ${gatewayHealth.responseTime}ms`);
+      if (gatewayHealth.uptime) {
+        console.log(`📋 Uptime: ${gatewayHealth.uptime}s`);
+      }
+      if (gatewayHealth.version) {
+        console.log(`📋 Version: ${gatewayHealth.version}`);
+      }
+    }
+
+    const result: EnhancedConfigResult = {
+      ...configResult,
+      gatewayURL,
+      gatewayURLValid: isURLValid,
+      gatewayConnection: isConnected,
+      gatewayHealth,
+      authInfo
+    };
+
+    console.log('\n🎉 Gateway Discovery Complete!');
+    console.log(`📊 Summary: URL=${gatewayURL}, Valid=${isURLValid}, Connected=${isConnected}, Health=${gatewayHealth?.status || 'unknown'}`);
+
+    return result;
   }
 
   /**
